@@ -1,7 +1,9 @@
-package com.inter;
+package com.inter.ui;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import com.inter.R;
 
 public class MainActivity extends AppCompatActivity {
 

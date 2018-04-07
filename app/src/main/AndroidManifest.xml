@@ -43,26 +43,25 @@
         android:theme="@style/AppThemeDark">
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".ui.act.MainActivity"
             android:windowSoftInputMode="adjustPan|adjustResize">
             <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
+                <!--<action android:name="android.intent.action.VIEW" />-->
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.intent.action.SEND" />
-                <action android:name="android.intent.action.SENDTO" />
+                <!--<action android:name="android.intent.action.SEND" />-->
+                <!--<action android:name="android.intent.action.SENDTO" />-->
 
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <!--<category android:name="android.intent.category.DEFAULT" />-->
+                <!--<category android:name="android.intent.category.BROWSABLE" />-->
                 <!--<category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />-->
 
-                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.LAUNCHER"/>
 
-                <data android:scheme="sms" />
-                <data android:scheme="smsto" />
-                <data android:scheme="mms" />
-                <data android:scheme="mmsto" />
-                <data android:scheme="sms_body" />
+                <!--<data android:scheme="sms" />-->
+                <!--<data android:scheme="smsto" />-->
+                <!--<data android:scheme="mms" />-->
+                <!--<data android:scheme="mmsto" />-->
+                <!--<data android:scheme="sms_body" />-->
             </intent-filter>
         </activity>
 

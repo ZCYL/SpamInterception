@@ -49,7 +49,9 @@ import android.text.style.URLSpan;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
+
 import com.inter.R;
+import com.inter.bean.Contact;
 import com.inter.bean.PduBody;
 import com.inter.bean.PduPart;
 import com.inter.util.PduHeaders;
@@ -344,7 +346,7 @@ public abstract class MessageUtils {
         context.startActivity(forwardIntent);
     }
 
-    public static void lockMessage(Context context, MessageItem msgItem, boolean locked) {
+    public static void lockMessage(final Context context, MessageItem msgItem, boolean locked) {
         Uri uri;
         if ("sms".equals(msgItem.mType)) {
             uri = Sms.CONTENT_URI;
@@ -356,9 +358,12 @@ public abstract class MessageUtils {
         final ContentValues values = new ContentValues(1);
         values.put("locked", locked ? 1 : 0);
 
-        new Thread(() -> {
-            context.getContentResolver().update(lockUri,
-                    values, null, null);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                context.getContentResolver().update(lockUri,
+                        values, null, null);
+            }
         }, "MainActivity.lockMessage").start();
     }
 

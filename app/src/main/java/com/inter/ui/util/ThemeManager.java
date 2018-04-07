@@ -20,9 +20,11 @@ import android.support.annotation.ColorInt;
 import android.support.annotation.DrawableRes;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v7.internal.widget.AdapterViewCompat;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -30,28 +32,30 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
-import com.moez.QKSMS.R;
-import com.moez.QKSMS.common.AnalyticsManager;
-import com.moez.QKSMS.common.CIELChEvaluator;
-import com.moez.QKSMS.common.ConversationPrefsHelper;
-import com.moez.QKSMS.common.LiveViewManager;
-import com.moez.QKSMS.common.utils.ColorUtils;
-import com.moez.QKSMS.common.utils.KeyboardUtils;
-import com.moez.QKSMS.common.utils.Units;
-import com.moez.QKSMS.enums.QKPreference;
-import com.moez.QKSMS.receiver.IconColorReceiver;
-import com.moez.QKSMS.theme.IconAdapter;
-import com.moez.QKSMS.ui.base.QKActivity;
-import com.moez.QKSMS.ui.dialog.ColorPickerPagerAdapter;
-import com.moez.QKSMS.ui.dialog.QKDialog;
-import com.moez.QKSMS.ui.settings.SettingsFragment;
-import com.moez.QKSMS.ui.view.QKEditText;
-import com.moez.QKSMS.ui.view.QKTextView;
-import com.moez.QKSMS.ui.view.colorpicker.ColorPickerPalette;
-import com.moez.QKSMS.ui.widget.WidgetProvider;
+import com.inter.R;
+import com.inter.ada.ColorPickerPagerAdapter;
+import com.inter.ada.IconAdapter;
+import com.inter.convers.ConversationPrefsHelper;
+import com.inter.face.LiveView;
+import com.inter.receiver.IconColorReceiver;
+import com.inter.ui.base.BaseActivity;
+import com.inter.ui.dialog.QKDialog;
+import com.inter.ui.setting.SettingsFragment;
+import com.inter.ui.widget.QKEditText;
+import com.inter.ui.widget.QKTextView;
+import com.inter.ui.widget.WidgetProvider;
+import com.inter.util.CIELChEvaluator;
+import com.inter.util.CommonUtil;
+import com.inter.util.KeyboardUtils;
+import com.inter.util.LiveViewManager;
+import com.inter.util.QKPreference;
+import com.inter.util.Units;
+import com.inter.util.colorpicker.ColorPickerPalette;
+import com.inter.util.colorpicker.ColorPickerSwatch;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class ThemeManager {
@@ -275,9 +279,12 @@ public class ThemeManager {
         if (startColor != endColor) {
             ValueAnimator backgroundAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), startColor, endColor);
             backgroundAnimation.setDuration(TRANSITION_LENGTH);
-            backgroundAnimation.addUpdateListener(animation -> {
-                mBackgroundColor = (Integer) animation.getAnimatedValue();
-                LiveViewManager.refreshViews(QKPreference.BACKGROUND);
+            backgroundAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                @Override
+                public void onAnimationUpdate(ValueAnimator animation) {
+                    mBackgroundColor = (Integer) animation.getAnimatedValue();
+                    LiveViewManager.refreshViews(QKPreference.BACKGROUND);
+                }
             });
             backgroundAnimation.addListener(new AnimatorListenerAdapter() {
                 @Override
@@ -332,9 +339,9 @@ public class ThemeManager {
         LiveViewManager.refreshViews(QKPreference.BACKGROUND);
     }
 
-    public static void setIcon(final QKActivity context) {
+    public static void setIcon(final BaseActivity context) {
 
-        String[] colors = {
+        final String[] colors = {
                 "Default", "Dark", "Red", "Pink", "Purple", "DeepPurple",
                 "Indigo", "Blue", "LightBlue", "Cyan", "Teal", "Green",
                 "LightGreen", "Lime", "Yellow", "Amber", "Orange", "DeepOrange",
@@ -344,38 +351,41 @@ public class ThemeManager {
         RecyclerView recyclerView = new RecyclerView(context);
         recyclerView.setLayoutParams(new LinearLayout.LayoutParams(-1, Units.dpToPx(context, 200)));
         recyclerView.setLayoutManager(new GridLayoutManager(context, 4));
-        recyclerView.setAdapter(new IconAdapter(context, (parent, view, position, id) -> {
-            PackageManager packageManager = context.getPackageManager();
+        recyclerView.setAdapter(new IconAdapter(context, new AdapterViewCompat.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterViewCompat<?> parent, View view, int position, long id) {
+                PackageManager packageManager = context.getPackageManager();
 
-            // Disable all of the color aliases, except for the alias with the current
-            // color.
-            String enabledComponent = null;
-            for (int i = 0; i < colors.length; i++) {
-                String componentClassName = String.format("com.moez.QKSMS.ui.MainActivity-%s", colors[i]);
+                // Disable all of the color aliases, except for the alias with the current
+                // color.
+                String enabledComponent = null;
+                for (int i = 0; i < colors.length; i++) {
+                    String componentClassName = String.format("com.moez.QKSMS.ui.MainActivity-%s", colors[i]);
 
-                // Save the enabled component so we can kill the app with this one when
-                // it's all done.
-                if (i == position) {
-                    enabledComponent = componentClassName;
-                } else {
-                    packageManager.setComponentEnabledSetting(
-                            new ComponentName(context, componentClassName),
-                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                            // Don't kill the app while we're in the loop! This will
-                            // prevent the other component enabled settings from
-                            // changing, i.e. they will all be disabled and the app
-                            // won't show up to the user.
-                            PackageManager.DONT_KILL_APP
-                    );
+                    // Save the enabled component so we can kill the app with this one when
+                    // it's all done.
+                    if (position == i) {
+                        enabledComponent = componentClassName;
+                    } else {
+                        packageManager.setComponentEnabledSetting(
+                                new ComponentName(context, componentClassName),
+                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                                // Don't kill the app while we're in the loop! This will
+                                // prevent the other component enabled settings from
+                                // changing, i.e. they will all be disabled and the app
+                                // won't show up to the user.
+                                PackageManager.DONT_KILL_APP
+                        );
+                    }
                 }
-            }
 
-            // Broadcast an intent to a receiver that will:
-            // 1) enable the last component; and
-            // 2) relaunch QKSMS with the new component name.
-            Intent intent = new Intent(IconColorReceiver.ACTION_ICON_COLOR_CHANGED);
-            intent.putExtra(IconColorReceiver.EXTRA_COMPONENT_NAME, enabledComponent);
-            context.sendBroadcast(intent);
+                // Broadcast an intent to a receiver that will:
+                // 1) enable the last component; and
+                // 2) relaunch QKSMS with the new component name.
+                Intent intent = new Intent(IconColorReceiver.ACTION_ICON_COLOR_CHANGED);
+                intent.putExtra(IconColorReceiver.EXTRA_COMPONENT_NAME, enabledComponent);
+                context.sendBroadcast(intent);
+            }
         }));
 
         new QKDialog()
@@ -497,27 +507,45 @@ public class ThemeManager {
         return mTheme == Theme.DARK || mTheme == Theme.BLACK;
     }
 
-    public static void showColorPickerDialog(final QKActivity context) {
-        showColorPicker(context, v -> setColor(context, getColor()));
-    }
-
-    public static void showColorPickerDialogForConversation(final QKActivity context, ConversationPrefsHelper prefs) {
-        showColorPicker(context, v -> {
-            prefs.putString(QKPreference.THEME.getKey(), "" + getColor());
-            LiveViewManager.refreshViews(QKPreference.CONVERSATION_THEME);
+    public static void showColorPickerDialog(final BaseActivity context) {
+        showColorPicker(context, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setColor(context, getColor());
+            }
         });
     }
 
-    private static void showColorPicker(QKActivity context, View.OnClickListener saveListener) {
+    public static void showColorPickerDialogForConversation(final BaseActivity context, final ConversationPrefsHelper prefs) {
+        showColorPicker(context, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                prefs.putString(QKPreference.THEME.getKey(), "" + getColor());
+                LiveViewManager.refreshViews(QKPreference.CONVERSATION_THEME);
+            }
+        });
+    }
+
+    private static void showColorPicker(BaseActivity context, final View.OnClickListener saveListener) {
         final QKDialog dialog = new QKDialog();
 
         View view = LayoutInflater.from(mContext).inflate(R.layout.dialog_color_picker, null, false);
-        ColorPickerViewHolder holder = new ColorPickerViewHolder(view);
+        final ColorPickerViewHolder holder = new ColorPickerViewHolder(view);
 
         holder.mTab1.setBackgroundDrawable(getRippleBackground());
         holder.mTab2.setBackgroundDrawable(getRippleBackground());
-        holder.mTab1.setOnClickListener(v -> holder.mPager.setCurrentItem(0));
-        holder.mTab2.setOnClickListener(v -> holder.mPager.setCurrentItem(1));
+        holder.mTab1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                holder.mPager.setCurrentItem(0);
+            }
+        } );
+        holder.mTab2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                holder.mPager.setCurrentItem(1);
+            }
+        });
 
         ColorPickerPagerAdapter adapter = new ColorPickerPagerAdapter(context);
         holder.mPager.setAdapter(adapter);
@@ -532,13 +560,19 @@ public class ThemeManager {
         });
 
         int swatchColor = getSwatchColor(getColor());
-        holder.mPalette.init(19, 4, color -> {
-            holder.mPalette.init(getSwatch(color).length, 4, color2 -> {
-                setActiveColor(color2);
-                saveListener.onClick(null);
-                dialog.dismiss();
-            });
-            holder.mPalette.drawPalette(getSwatch(color), getColor());
+        holder.mPalette.init(19, 4, new ColorPickerSwatch.OnColorSelectedListener() {
+            @Override
+            public void onColorSelected(int color) {
+                holder.mPalette.init(getSwatch(color).length, 4, new ColorPickerSwatch.OnColorSelectedListener() {
+                    @Override
+                    public void onColorSelected(int color2) {
+                        setActiveColor(color2);
+                        saveListener.onClick(null);
+                        dialog.dismiss();
+                    }
+                });
+                holder.mPalette.drawPalette(getSwatch(color), getColor());
+            }
         });
         holder.mPalette.drawPalette(PALETTE, swatchColor);
 
@@ -579,21 +613,27 @@ public class ThemeManager {
         Drawable thumbRed = ContextCompat.getDrawable(mContext, R.drawable.seek_thumb);
         Drawable thumbGreen = ContextCompat.getDrawable(mContext, R.drawable.seek_thumb);
         Drawable thumbBlue = ContextCompat.getDrawable(mContext, R.drawable.seek_thumb);
-        LiveViewManager.registerView(QKPreference.THEME, holder.mPreview, key -> {
-            holder.mPreview.setBackgroundColor(getColor());
-            holder.mRed.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
-            holder.mGreen.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
-            holder.mBlue.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
-            if (holder.mPager.getCurrentItem() == 0) {
-                holder.mTab1.setTextColor(getColor());
-            } else {
-                holder.mTab2.setTextColor(getColor());
+        LiveViewManager.registerView(QKPreference.THEME, holder.mPreview, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.mPreview.setBackgroundColor(getColor());
+                holder.mRed.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
+                holder.mGreen.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
+                holder.mBlue.getProgressDrawable().setColorFilter(getColor(), PorterDuff.Mode.MULTIPLY);
+                if (holder.mPager.getCurrentItem() == 0) {
+                    holder.mTab1.setTextColor(getColor());
+                } else {
+                    holder.mTab2.setTextColor(getColor());
+                }
             }
         });
 
-        LiveViewManager.registerView(QKPreference.BACKGROUND, holder.mHex, key -> {
-            holder.mHex.getBackground().setColorFilter(0x22888888, PorterDuff.Mode.MULTIPLY);
-            holder.mError.setColorFilter(getTextOnBackgroundSecondary(), PorterDuff.Mode.SRC_ATOP);
+        LiveViewManager.registerView(QKPreference.BACKGROUND, holder.mHex, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.mHex.getBackground().setColorFilter(0x22888888, PorterDuff.Mode.MULTIPLY);
+                holder.mError.setColorFilter(getTextOnBackgroundSecondary(), PorterDuff.Mode.SRC_ATOP);
+            }
         });
 
         holder.mRed.setThumb(thumbRed);
@@ -609,56 +649,73 @@ public class ThemeManager {
 
         String colorString = Integer.toHexString(getColor());
         holder.mHex.setText(colorString.substring(colorString.length() > 6 ? colorString.length() - 6 : 0));
-        holder.mHex.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                holder.mHex.clearFocus();
-                KeyboardUtils.hide(mContext, holder.mHex);
-            }
-            return false;
-        });
-        holder.mHex.setTextChangedListener(s -> {
-            if (s.length() == 6) {
-                int color = Color.parseColor("#" + s.toString());
-                holder.mError.setVisibility(View.INVISIBLE);
-                if (color != getColor()) {
-                    holder.mRed.setProgress(Color.red(color));
-                    holder.mGreen.setProgress(Color.green(color));
-                    holder.mBlue.setProgress(Color.blue(color));
+        holder.mHex.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    holder.mHex.clearFocus();
+                    KeyboardUtils.hide(mContext, holder.mHex);
                 }
-            } else {
-                holder.mError.setVisibility(View.VISIBLE);
+                return false;
+            }
+        });
+        holder.mHex.setTextChangedListener(new QKEditText.TextChangedListener() {
+            @Override
+            public void onTextChanged(CharSequence s) {
+                if (s.length() == 6) {
+                    int color = Color.parseColor("#" + s.toString());
+                    holder.mError.setVisibility(View.INVISIBLE);
+                    if (color != getColor()) {
+                        holder.mRed.setProgress(Color.red(color));
+                        holder.mGreen.setProgress(Color.green(color));
+                        holder.mBlue.setProgress(Color.blue(color));
+                    }
+                } else {
+                    holder.mError.setVisibility(View.VISIBLE);
+                }
             }
         });
 
         dialog.setContext(context)
                 .setCustomView(view)
-                .setNegativeButton(R.string.cancel, v -> setActiveColor(getThemeColor()))
+                .setNegativeButton(R.string.cancel, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        setActiveColor(getThemeColor());
+                    }
+                })
                 .setPositiveButton(R.string.save, saveListener)
                 .show();
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public static void setStatusBarTintEnabled(QKActivity activity, boolean enabled) {
+    public static void setStatusBarTintEnabled(final BaseActivity activity, boolean enabled) {
         int colorFrom = enabled ? mResources.getColor(R.color.black) : mColor;
         int colorTo = enabled ? mColor : mResources.getColor(R.color.black);
 
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo);
         colorAnimation.setDuration(TRANSITION_LENGTH);
-        colorAnimation.addUpdateListener(animation -> {
-            activity.getWindow().setStatusBarColor(ColorUtils.darken((Integer) animation.getAnimatedValue()));
+        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                activity.getWindow().setStatusBarColor(CommonUtil.darken((Integer) animation.getAnimatedValue()));
+            }
         });
         colorAnimation.start();
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public static void setNavigationBarTintEnabled(QKActivity activity, boolean enabled) {
+    public static void setNavigationBarTintEnabled(final BaseActivity activity, boolean enabled) {
         int colorFrom = enabled ? mResources.getColor(R.color.black) : mColor;
         int colorTo = enabled ? mColor : mResources.getColor(R.color.black);
 
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), colorFrom, colorTo);
         colorAnimation.setDuration(TRANSITION_LENGTH);
-        colorAnimation.addUpdateListener(animation -> {
-            activity.getWindow().setNavigationBarColor(ColorUtils.darken((Integer) animation.getAnimatedValue()));
+        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                activity.getWindow().setNavigationBarColor(CommonUtil.darken((Integer) animation.getAnimatedValue()));
+            }
         });
         colorAnimation.start();
     }
@@ -667,13 +724,13 @@ public class ThemeManager {
         return String.format("#%08x", color).toUpperCase();
     }
 
-    public static void setColor(QKActivity activity, int color) {
+    public static void setColor(final BaseActivity activity, int color) {
 
-        AnalyticsManager.getInstance().sendEvent(
-                AnalyticsManager.CATEGORY_PREFERENCE_CHANGE,
-                SettingsFragment.CATEGORY_THEME,
-                getColorString(color)
-        );
+//        AnalyticsManager.getInstance().sendEvent(
+//                AnalyticsManager.CATEGORY_PREFERENCE_CHANGE,
+//                SettingsFragment.CATEGORY_THEME,
+//                getColorString(color)
+//        );
 
         int colorFrom = mActiveColor;
         mColor = color;
@@ -691,8 +748,11 @@ public class ThemeManager {
         ValueAnimator colorAnimation = ValueAnimator.ofObject(new CIELChEvaluator(colorFrom, color), 0);
         colorAnimation.setDuration(TRANSITION_LENGTH);
         colorAnimation.setInterpolator(new DecelerateInterpolator());
-        colorAnimation.addUpdateListener(animation -> {
-            setActiveColor((Integer) animation.getAnimatedValue());
+        colorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                setActiveColor((Integer) animation.getAnimatedValue());
+            }
         });
         colorAnimation.addListener(new AnimatorListenerAdapter() {
             @Override
@@ -712,10 +772,13 @@ public class ThemeManager {
                 ValueAnimator titleColorAnimation = ValueAnimator.ofObject(new ArgbEvaluator(), title.getCurrentTextColor(), mTextOnColorPrimary);
                 titleColorAnimation.setDuration(TRANSITION_LENGTH);
                 titleColorAnimation.setInterpolator(new DecelerateInterpolator());
-                titleColorAnimation.addUpdateListener(animation -> {
-                    int color1 = (Integer) animation.getAnimatedValue();
-                    title.setTextColor(color1);
-                    activity.colorMenuIcons(activity.getMenu(), color1);
+                titleColorAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator animation) {
+                        int color1 = (Integer) animation.getAnimatedValue();
+                        title.setTextColor(color1);
+                        activity.colorMenuIcons(activity.getMenu(), color1);
+                    }
                 });
                 titleColorAnimation.start();
             }
@@ -766,20 +829,22 @@ public class ThemeManager {
     }
 
     static class ColorPickerViewHolder {
-        @Bind(R.id.tab_1) QKTextView mTab1;
-        @Bind(R.id.tab_2) QKTextView mTab2;
-        @Bind(R.id.pager)
+        @BindView(R.id.tab_1) QKTextView mTab1;
+        @BindView(R.id.tab_2) QKTextView mTab2;
+        @BindView(R.id.pager)
         ViewPager mPager;
-        @Bind(R.id.palette) ColorPickerPalette mPalette;
-        @Bind(R.id.preview) View mPreview;
-        @Bind(R.id.red) SeekBar mRed;
-        @Bind(R.id.red_value) QKTextView mRedValue;
-        @Bind(R.id.green) SeekBar mGreen;
-        @Bind(R.id.green_value) QKTextView mGreenValue;
-        @Bind(R.id.blue) SeekBar mBlue;
-        @Bind(R.id.blue_value) QKTextView mBlueValue;
-        @Bind(R.id.hex) QKEditText mHex;
-        @Bind(R.id.error) ImageView mError;
+        @BindView(R.id.palette)
+        ColorPickerPalette mPalette;
+        @BindView(R.id.preview) View mPreview;
+        @BindView(R.id.red) SeekBar mRed;
+        @BindView(R.id.red_value) QKTextView mRedValue;
+        @BindView(R.id.green) SeekBar mGreen;
+        @BindView(R.id.green_value) QKTextView mGreenValue;
+        @BindView(R.id.blue) SeekBar mBlue;
+        @BindView(R.id.blue_value) QKTextView mBlueValue;
+        @BindView(R.id.hex)
+        QKEditText mHex;
+        @BindView(R.id.error) ImageView mError;
 
         public ColorPickerViewHolder(View view) {
             ButterKnife.bind(this, view);

@@ -503,9 +503,6 @@ public class Conversation {
         // Invalidate thread ID because the recipient set has changed.
         mThreadId = 0;
 
-        if (Log.isLoggable(LogTag.APP, Log.VERBOSE)) {
-            Log.d(TAG, "setRecipients after: " + this.toString());
-        }
     }
 
     /**

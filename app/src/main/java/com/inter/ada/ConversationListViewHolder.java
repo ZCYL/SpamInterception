@@ -16,6 +16,7 @@ import com.inter.ui.base.BaseActivity;
 import com.inter.ui.base.ClickyViewHolder;
 import com.inter.ui.setting.SettingsFragment;
 import com.inter.ui.util.ThemeManager;
+import com.inter.ui.widget.AvatarView;
 import com.inter.ui.widget.QKTextView;
 
 public class ConversationListViewHolder extends ClickyViewHolder<Conversation> implements Contact.UpdateListener {
@@ -84,10 +85,13 @@ public class ConversationListViewHolder extends ClickyViewHolder<Conversation> i
         final ConversationLegacy conversationLegacy = new ConversationLegacy(mContext, mData.getThreadId());
 
         if (shouldUpdate) {
-            mContext.runOnUiThread(() -> {
-                mAvatarView.setImageDrawable(drawable);
-                mAvatarView.setContactName(name);
-                fromView.setText(formatMessage(mData, conversationLegacy));
+            mContext.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mAvatarView.setImageDrawable(drawable);
+                    mAvatarView.setContactName(name);
+                    fromView.setText(formatMessage(mData, conversationLegacy));
+                }
             });
         }
     }

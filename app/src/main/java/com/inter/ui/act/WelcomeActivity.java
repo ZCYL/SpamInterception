@@ -10,13 +10,7 @@ import android.view.View;
 import android.widget.ImageView;
 
 import com.inter.ui.base.BaseActivity;
-import com.moez.QKSMS.R;
-import com.moez.QKSMS.common.LiveViewManager;
-import com.moez.QKSMS.enums.QKPreference;
-import com.moez.QKSMS.ui.ThemeManager;
-import com.moez.QKSMS.ui.base.QKActivity;
-import com.moez.QKSMS.ui.settings.SettingsFragment;
-import com.moez.QKSMS.ui.view.RobotoTextView;
+
 
 
 public class WelcomeActivity extends BaseActivity implements ViewPager.OnPageChangeListener, View.OnClickListener {

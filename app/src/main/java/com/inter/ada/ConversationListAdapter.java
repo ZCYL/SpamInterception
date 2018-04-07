@@ -8,13 +8,17 @@ import android.view.ViewGroup;
 import com.inter.R;
 import com.inter.bean.Contact;
 import com.inter.bean.Conversation;
+import com.inter.convers.ConversationPrefsHelper;
+import com.inter.face.LiveView;
 import com.inter.ui.base.BaseActivity;
 import com.inter.ui.setting.SettingsFragment;
 import com.inter.ui.util.ThemeManager;
+import com.inter.util.DateFormatter;
 import com.inter.util.FontManager;
 import com.inter.util.LiveViewManager;
 import com.inter.util.QKPreference;
 import com.inter.util.QKPreferences;
+import com.inter.util.emoji.EmojiRegistry;
 
 
 public class ConversationListAdapter extends RecyclerCursorAdapter<ConversationListViewHolder, Conversation> {
@@ -37,26 +41,32 @@ public class ConversationListAdapter extends RecyclerCursorAdapter<ConversationL
         LayoutInflater inflater = LayoutInflater.from(mContext);
         View view = inflater.inflate(R.layout.list_item_conversation, null);
 
-        ConversationListViewHolder holder = new ConversationListViewHolder(mContext, view);
+        final ConversationListViewHolder holder = new ConversationListViewHolder(mContext, view);
         holder.mutedView.setImageResource(R.drawable.ic_notifications_muted);
         holder.unreadView.setImageResource(R.drawable.ic_unread_indicator);
         holder.errorIndicator.setImageResource(R.drawable.ic_error);
 
-        LiveViewManager.registerView(QKPreference.THEME, this, key -> {
-            holder.mutedView.setColorFilter(ThemeManager.getColor());
-            holder.unreadView.setColorFilter(ThemeManager.getColor());
-            holder.errorIndicator.setColorFilter(ThemeManager.getColor());
+        LiveViewManager.registerView(QKPreference.THEME, this, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.mutedView.setColorFilter(ThemeManager.getColor());
+                holder.unreadView.setColorFilter(ThemeManager.getColor());
+                holder.errorIndicator.setColorFilter(ThemeManager.getColor());
+            }
         });
 
-        LiveViewManager.registerView(QKPreference.BACKGROUND, this, key -> {
-            holder.root.setBackgroundDrawable(ThemeManager.getRippleBackground());
+        LiveViewManager.registerView(QKPreference.BACKGROUND, this, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.root.setBackground(ThemeManager.getRippleBackground());
+            }
         });
 
         return holder;
     }
 
     @Override
-    public void onBindViewHolder(ConversationListViewHolder holder, int position) {
+    public void onBindViewHolder(final ConversationListViewHolder holder, int position) {
         final Conversation conversation = getItem(position);
 
         holder.mData = conversation;
@@ -85,8 +95,11 @@ public class ConversationListAdapter extends RecyclerCursorAdapter<ConversationL
             holder.snippetView.setMaxLines(1);
         }
 
-        LiveViewManager.registerView(QKPreference.THEME, this, key -> {
-            holder.dateView.setTextColor(hasUnreadMessages ? ThemeManager.getColor() : ThemeManager.getTextOnBackgroundSecondary());
+        LiveViewManager.registerView(QKPreference.THEME, this, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.dateView.setTextColor(hasUnreadMessages ? ThemeManager.getColor() : ThemeManager.getTextOnBackgroundSecondary());
+            }
         });
 
         if (isInMultiSelectMode()) {
@@ -104,8 +117,11 @@ public class ConversationListAdapter extends RecyclerCursorAdapter<ConversationL
             holder.mSelected.setVisibility(View.GONE);
         }
 
-        LiveViewManager.registerView(QKPreference.HIDE_AVATAR_CONVERSATIONS, this, key -> {
-            holder.mAvatarView.setVisibility(QKPreferences.getBoolean(QKPreference.HIDE_AVATAR_CONVERSATIONS) ? View.GONE : View.VISIBLE);
+        LiveViewManager.registerView(QKPreference.HIDE_AVATAR_CONVERSATIONS, this, new LiveView() {
+            @Override
+            public void refresh(String key) {
+                holder.mAvatarView.setVisibility(QKPreferences.getBoolean(QKPreference.HIDE_AVATAR_CONVERSATIONS) ? View.GONE : View.VISIBLE);
+            }
         });
 
         // Date
